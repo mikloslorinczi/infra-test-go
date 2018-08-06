@@ -13,10 +13,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type resMsg struct {
-	Body string `json:"resMsg,omitempty"`
-}
-
 type countData struct {
 	Data string `json:"Data"`
 }
@@ -26,13 +22,13 @@ type execCommand struct {
 }
 
 // Fizzbuzz returns fizz if num dividable with 3 buzz if dividable with 5 and fizzbuzz if dividable with both.
-func Fizzbuzz(wr http.ResponseWriter, req *http.Request) {
+func Fizzbuzz(res http.ResponseWriter, req *http.Request) {
 	msg := ""
 	params := mux.Vars(req)
 	myInt, err := strconv.Atoi(params["num"])
 	if err != nil {
-		res := resMsg{params["num"] + " is not a number"}
-		json.NewEncoder(wr).Encode(res)
+		json.NewEncoder(res).Encode(params["num"] + " is not a number")
+		// json.NewEncoder(res).Encode(params)
 		return
 	}
 	if myInt%3 == 0 {
@@ -41,22 +37,20 @@ func Fizzbuzz(wr http.ResponseWriter, req *http.Request) {
 	if myInt%5 == 0 {
 		msg += "buzz"
 	}
-	res := resMsg{msg}
-	json.NewEncoder(wr).Encode(res.Body)
+	json.NewEncoder(res).Encode(msg)
 }
 
 // Count counts the occurance of individual characters in Req.Body.Data.
-func Count(wr http.ResponseWriter, req *http.Request) {
+func Count(res http.ResponseWriter, req *http.Request) {
 	var myData countData
 	var myMap = make(map[string]int)
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&myData)
 	if err != nil {
-		res := resMsg{"Invalid data"}
-		json.NewEncoder(wr).Encode(res)
+		json.NewEncoder(res).Encode("Invalid data")
 		return
 	}
-	for i, _ := range myData.Data {
+	for i := range myData.Data {
 		char := string(myData.Data[i])
 		if myMap[char] == 0 {
 			myMap[char] = 1
@@ -64,31 +58,29 @@ func Count(wr http.ResponseWriter, req *http.Request) {
 			myMap[char]++
 		}
 	}
-	json.NewEncoder(wr).Encode(myMap)
+	json.NewEncoder(res).Encode(myMap)
 }
 
 // Exec executes a shell command on the host and sends back the output.
-func Exec(wr http.ResponseWriter, req *http.Request) {
+func Exec(res http.ResponseWriter, req *http.Request) {
 	var command execCommand
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&command)
 	if err != nil {
-		res := resMsg{"Invalid Command"}
-		json.NewEncoder(wr).Encode(res)
+		json.NewEncoder(res).Encode("Invalid Command")
 		return
 	}
 	out, err := exec.Command("sh", "-c", command.Command).Output()
 	if err != nil {
-		log.Fatal(err)
+		json.NewEncoder(res).Encode("Error during command execution")
+		return
 	}
-	fmt.Printf("OUT : %s", out)
-	res := resMsg{string(out)}
-	json.NewEncoder(wr).Encode(res.Body)
+	json.NewEncoder(res).Encode(string(out))
 }
 
 func custom404() http.Handler {
-	return http.HandlerFunc(func(wr http.ResponseWriter, req *http.Request) {
-		json.NewEncoder(wr).Encode("Wrong way 404 🐸")
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		json.NewEncoder(res).Encode("Wrong way 404 🐸")
 	})
 }
 
